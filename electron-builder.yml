@@ -1,0 +1,28 @@
+appId: com.mdpdf.app
+productName: mdPDF
+main: electron/dist/main.js
+
+directories:
+  output: release
+
+files:
+  - electron/dist/**/*
+  - renderer/out/**/*
+  - node_modules/github-markdown-css/**/*
+  - node_modules/highlight.js/styles/github.css
+  - package.json
+
+win:
+  target:
+    - target: nsis
+    - target: portable
+  icon: build/icon.ico
+
+mac:
+  target: dmg
+  category: public.app-category.productivity
+  icon: build/icon.icns
+
+linux:
+  target: AppImage
+  icon: build/icon.png
