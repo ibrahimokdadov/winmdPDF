@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog } from 'electron'
-import { writeFile } from 'fs/promises'
+import type { PrintToPDFOptions } from 'electron'
+import { writeFile, unlink } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { markdownToHtml } from '../renderer/lib/markdown-to-html'
@@ -77,8 +78,7 @@ export async function exportToPdf(markdown: string, settings: StyleSettings): Pr
       })
     `)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pdfBuffer = await win.webContents.printToPDF(getPrintToPdfOptions(settings) as any)
+    const pdfBuffer = await win.webContents.printToPDF(getPrintToPdfOptions(settings) as PrintToPDFOptions)
 
     const { filePath } = await dialog.showSaveDialog({
       defaultPath: 'output.pdf',
@@ -91,6 +91,6 @@ export async function exportToPdf(markdown: string, settings: StyleSettings): Pr
     return { success: true }
   } finally {
     win.close()
-    try { require('fs').unlinkSync(tmpPath) } catch { /* ignore */ }
+    await unlink(tmpPath).catch(() => {})
   }
 }
