@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { Fraunces, Plus_Jakarta_Sans, Fira_Code } from 'next/font/google'
 import './globals.css'
-import 'github-markdown-css/github-markdown-light.css'
 
 const fraunces = Fraunces({
   subsets: ['latin'],
