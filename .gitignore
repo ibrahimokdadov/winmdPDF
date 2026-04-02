@@ -1,0 +1,7 @@
+node_modules/
+renderer/node_modules/
+renderer/.next/
+renderer/out/
+electron/dist/
+release/
+.superpowers/
