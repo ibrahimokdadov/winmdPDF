@@ -40,9 +40,21 @@ ipcMain.handle('export-pdf', async (_event, markdown: string, settings: StyleSet
 app.whenReady().then(() => {
   // Register app:// protocol to serve renderer/out/ static files
   protocol.handle('app', (request) => {
-    const url = request.url.replace('app://', '')
-    const filePath = join(app.getAppPath(), 'renderer/out', url || 'index.html')
-    return net.fetch(pathToFileURL(filePath).toString())
+    try {
+      const { pathname } = new URL(request.url)
+      const relPath = pathname.replace(/^\//, '')
+      const outDir = join(app.getAppPath(), 'renderer/out')
+      const filePath = join(outDir, relPath || 'index.html')
+      // Guard against path traversal
+      const resolvedOut = outDir.replace(/\\/g, '/')
+      const resolvedFile = filePath.replace(/\\/g, '/')
+      if (!resolvedFile.startsWith(resolvedOut + '/') && resolvedFile !== resolvedOut) {
+        return new Response('Forbidden', { status: 403 })
+      }
+      return net.fetch(pathToFileURL(filePath).toString())
+    } catch {
+      return new Response('Not Found', { status: 404 })
+    }
   })
 
   createWindow()
