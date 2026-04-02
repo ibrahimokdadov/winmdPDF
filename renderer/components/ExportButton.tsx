@@ -12,8 +12,14 @@ export default function ExportButton({ markdown, settings }: ExportButtonProps) 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const isElectron = typeof window !== 'undefined' && !!window.electronAPI
+
   async function handleExport() {
     setError(null)
+    if (!isElectron) {
+      window.print()
+      return
+    }
     setLoading(true)
     try {
       const result = await window.electronAPI.exportPDF(markdown, settings)

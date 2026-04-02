@@ -1,0 +1,23 @@
+# mdPDF
+
+> Write Markdown, export to PDF. Desktop app with live preview, Mermaid diagrams, and custom style controls.
+
+mdPDF is a Markdown-to-PDF editor that runs as a desktop app on Windows, macOS, and Linux. You write Markdown on the left, see a formatted live preview on the right, and click Export to get a PDF. The desktop app uses Electron and replaces Puppeteer with Electron's built-in Chromium, so there is nothing extra to install and no Docker required.
+
+Mermaid diagrams render correctly in both the preview and the PDF export. The app polls for SVG elements before calling printToPDF, so sequence diagrams, flowcharts, Gantt charts, class diagrams, and other Mermaid types come out looking exactly as they do in the preview.
+
+The style sidebar lets you set font family, font size, line height, margins, and header/footer text. Settings persist between sessions. There is also a format toolbar for inline formatting: bold, italic, underline, strikethrough, text color, highlight, font family, and font size applied to selected text. A diagram inserter lets you pick a Mermaid type and inserts a template at the cursor.
+
+The web version is at mdpdf.whhite.com. The desktop app (this site) is at winmdpdf.whhite.com. Source code is on GitHub.
+
+## Key pages
+
+- /: Main editor
+
+## Source
+
+https://github.com/ibrahimokdadov/winmdPDF
+
+## Contact
+
+ibrahim@whhite.com

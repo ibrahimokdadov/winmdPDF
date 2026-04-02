@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#0d1424"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)" opacity="0.6"/>
+
+  <!-- Accent bar left -->
+  <rect x="0" y="0" width="7" height="630" fill="#818cf8"/>
+
+  <!-- Top gradient strip -->
+  <defs>
+    <linearGradient id="strip" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   style="stop-color:#6366f1"/>
+      <stop offset="50%"  style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#d946ef"/>
+    </linearGradient>
+  </defs>
+  <rect x="7" y="0" width="1193" height="3" fill="url(#strip)"/>
+
+  <!-- App name -->
+  <text x="80" y="270"
+        font-family="'Arial Narrow', Arial, sans-serif"
+        font-size="112" font-weight="900" letter-spacing="-3"
+        fill="#818cf8">mdPDF</text>
+
+  <!-- Tagline -->
+  <text x="80" y="338"
+        font-family="Arial, sans-serif"
+        font-size="30" font-weight="400"
+        fill="#94a3b8">Write Markdown, export to PDF — live preview, Mermaid diagrams, desktop app</text>
+
+  <!-- Feature pills -->
+  <rect x="80"  y="390" width="148" height="34" rx="17" fill="#818cf8" opacity="0.15"/>
+  <text x="154" y="412" text-anchor="middle" font-family="'Courier New', monospace" font-size="14" fill="#818cf8">Desktop App</text>
+
+  <rect x="244" y="390" width="140" height="34" rx="17" fill="#818cf8" opacity="0.15"/>
+  <text x="314" y="412" text-anchor="middle" font-family="'Courier New', monospace" font-size="14" fill="#818cf8">Mermaid</text>
+
+  <rect x="400" y="390" width="158" height="34" rx="17" fill="#818cf8" opacity="0.15"/>
+  <text x="479" y="412" text-anchor="middle" font-family="'Courier New', monospace" font-size="14" fill="#818cf8">Open Source</text>
+
+  <rect x="574" y="390" width="118" height="34" rx="17" fill="#818cf8" opacity="0.15"/>
+  <text x="633" y="412" text-anchor="middle" font-family="'Courier New', monospace" font-size="14" fill="#818cf8">No Docker</text>
+
+  <!-- Domain badge bottom right -->
+  <rect x="880" y="572" width="280" height="36" rx="6" fill="#818cf8" opacity="0.12"/>
+  <text x="1020" y="595" text-anchor="middle"
+        font-family="'Courier New', monospace" font-size="16"
+        fill="#818cf8">winmdpdf.whhite.com</text>
+</svg>
