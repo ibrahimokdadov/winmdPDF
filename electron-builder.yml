@@ -26,3 +26,8 @@ mac:
 linux:
   target: AppImage
   icon: build/icon.png
+
+publish:
+  provider: github
+  owner: ibrahimokdadov
+  repo: winmdPDF

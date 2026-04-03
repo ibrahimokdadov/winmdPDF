@@ -1,120 +1,234 @@
-import Image from 'next/image'
+'use client'
 
-const GITHUB   = 'https://github.com/ibrahimokdadov/winmdPDF'
-const RELEASES = 'https://github.com/ibrahimokdadov/winmdPDF/releases'
-const WEB_APP  = 'https://mdpdf.whhite.com'
+import { useEffect, useRef, useState } from 'react'
+import Editor from '@/components/Editor'
+import Preview from '@/components/Preview'
+import ExportButton from '@/components/ExportButton'
+import StyleSidebar from '@/components/StyleSidebar'
+import FormatToolbar from '@/components/FormatToolbar'
+import { loadSettings, saveSettings, DEFAULT_SETTINGS } from '@/lib/style-settings'
+import type { StyleSettings } from '@/lib/style-settings'
+import { wrap } from '@/lib/format-helpers'
+import type { FormatType } from '@/lib/format-helpers'
 
-const FEATURES = [
-  { label: 'Live preview',       desc: 'See formatted output as you type.' },
-  { label: 'Mermaid diagrams',   desc: 'Flowcharts, sequence diagrams, Gantt, ER — rendered in preview and PDF.' },
-  { label: 'Style sidebar',      desc: 'Fonts, margins, line height, header/footer text. Saved between sessions.' },
-  { label: 'Format toolbar',     desc: 'Bold, italic, color, highlight, font size — applied to selected text.' },
-  { label: 'No Puppeteer',       desc: "PDF rendering uses Electron's built-in Chromium. No second download." },
-  { label: 'No Docker, no server', desc: 'Open the app and go. Works fully offline.' },
-]
+const DEFAULT_MARKDOWN = `# Welcome to mdPDF
 
-const GH_ICON = (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-  </svg>
-)
+Start writing **Markdown** on the left — your formatted preview appears here instantly. Click **Export PDF** when ready.
+
+## What's supported
+
+- **Bold**, *italic*, ~~strikethrough~~, \`inline code\`
+- Tables, task lists, blockquotes
+- Syntax-highlighted code blocks
+- Headings, links, images
+
+\`\`\`typescript
+function greet(name: string): string {
+  return \`Hello, \${name}!\`
+}
+\`\`\`
+
+## A sample table
+
+| Feature       | Status  |
+|---------------|---------|
+| Live preview  | ✅ Done  |
+| PDF export    | ✅ Done  |
+| File upload   | ✅ Done  |
+| Style sidebar | ✅ Done  |
+| Format toolbar| ✅ Done  |
+
+## Task list
+
+- [x] Write your Markdown
+- [x] See the live preview
+- [ ] Export to PDF
+
+> Upload any \`.md\` file with the button above, or just start typing here.
+`
 
 export default function Home() {
+  const [markdown, setMarkdown] = useState(DEFAULT_MARKDOWN)
+  const [past, setPast] = useState<string[]>([])
+  const [settings, setSettings] = useState<StyleSettings>(DEFAULT_SETTINGS)
+  const [selection, setSelection] = useState({ selectionStart: 0, selectionEnd: 0 })
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const historySnapshotRef = useRef(DEFAULT_MARKDOWN)
+
+  useEffect(() => {
+    setSettings(loadSettings())
+  }, [])
+
+  function pushHistory(snapshot: string) {
+    setPast(prev => [...prev, snapshot])
+  }
+
+  function handleMarkdownChange(value: string) {
+    if (!debounceRef.current) {
+      historySnapshotRef.current = markdown
+    } else {
+      clearTimeout(debounceRef.current)
+    }
+    setMarkdown(value)
+    debounceRef.current = setTimeout(() => {
+      pushHistory(historySnapshotRef.current)
+      debounceRef.current = null
+    }, 500)
+  }
+
+  function beforeProgrammaticChange() {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+      pushHistory(historySnapshotRef.current)
+    }
+    pushHistory(markdown)
+  }
+
+  function handleUndo() {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+      setMarkdown(historySnapshotRef.current)
+      return
+    }
+    if (past.length === 0) return
+    const restored = past[past.length - 1]
+    setPast(prev => prev.slice(0, -1))
+    setMarkdown(restored)
+  }
+
+  function handleSettingsChange(patch: Partial<StyleSettings>) {
+    setSettings(prev => {
+      const next = { ...prev, ...patch }
+      saveSettings(next)
+      return next
+    })
+  }
+
+  function handleReset() {
+    saveSettings(DEFAULT_SETTINGS)
+    setSettings(DEFAULT_SETTINGS)
+  }
+
+  function handleSelect(selectionStart: number, selectionEnd: number) {
+    setSelection({ selectionStart, selectionEnd })
+  }
+
+  function insertSnippet(text: string) {
+    beforeProgrammaticChange()
+    const pos = selection.selectionStart
+    const before = markdown.slice(0, pos)
+    const after = markdown.slice(pos)
+    const snippet = '\n\n' + text + '\n\n'
+    const newMarkdown = before + snippet + after
+    const newPos = pos + snippet.length
+    setMarkdown(newMarkdown)
+    setSelection({ selectionStart: newPos, selectionEnd: newPos })
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus()
+      textareaRef.current?.setSelectionRange(newPos, newPos)
+    })
+  }
+
+  function applyFormat(type: FormatType, value?: string) {
+    const { selectionStart: start, selectionEnd: end } = selection
+    const selected = markdown.slice(start, end)
+    if (!selected) return
+    beforeProgrammaticChange()
+
+    const wrapped = wrap(type, selected, value)
+    const newPos = start + wrapped.length
+
+    setMarkdown(markdown.slice(0, start) + wrapped + markdown.slice(end))
+    setSelection({ selectionStart: newPos, selectionEnd: newPos })
+
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus()
+      textareaRef.current?.setSelectionRange(newPos, newPos)
+    })
+  }
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    beforeProgrammaticChange()
+    const reader = new FileReader()
+    reader.onload = (ev) => setMarkdown(ev.target?.result as string)
+    reader.readAsText(file)
+    e.target.value = ''
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200">
+    <div className="flex flex-col h-screen overflow-hidden bg-slate-950">
+      {/* Top gradient accent strip */}
+      <div className="h-[2px] bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 flex-shrink-0" />
 
-      {/* Top accent strip */}
-      <div className="h-[3px]" style={{ background: 'linear-gradient(90deg, #6366f1, #8b5cf6, #d946ef)' }} />
-
-      {/* Nav */}
-      <nav className="flex items-center justify-between px-8 py-4 border-b border-slate-800/60">
-        <div className="flex items-center gap-1.5 select-none">
-          <span className="font-serif italic text-white text-xl" style={{ fontWeight: 400, letterSpacing: '-0.02em' }}>md</span>
+      {/* Header */}
+      <header
+        className="flex items-center justify-between px-5 flex-shrink-0 bg-slate-900"
+        style={{ height: '52px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <div className="flex items-center gap-1 select-none">
+          <span className="font-serif italic text-white text-xl leading-none" style={{ fontWeight: 400, letterSpacing: '-0.02em' }}>md</span>
           <svg className="w-4 h-4 text-indigo-400 mx-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
           </svg>
-          <span className="font-serif text-white text-xl" style={{ fontWeight: 400, letterSpacing: '-0.02em' }}>PDF</span>
-          <span className="ml-2 text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-indigo-400 border border-slate-700">desktop</span>
+          <span className="font-serif text-white text-xl leading-none" style={{ fontWeight: 400, letterSpacing: '-0.02em' }}>PDF</span>
         </div>
-        <div className="flex items-center gap-5">
-          <a href={WEB_APP} target="_blank" rel="noopener noreferrer"
-             className="text-sm text-slate-500 hover:text-slate-200 transition-colors">
-            web version
-          </a>
-          <a href={GITHUB} target="_blank" rel="noopener noreferrer"
-             className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-200 transition-colors">
-            {GH_ICON} GitHub
-          </a>
-        </div>
-      </nav>
-
-      {/* Hero */}
-      <section className="flex flex-col items-center text-center px-6 pt-20 pb-14">
-        <h1 className="text-5xl font-bold mb-4 text-slate-100" style={{ letterSpacing: '-0.03em' }}>
-          Write Markdown.<br />Get a PDF.
-        </h1>
-        <p className="text-lg max-w-xl mb-8 text-slate-400 leading-relaxed">
-          Desktop app for Windows, macOS, and Linux. Live preview, Mermaid diagrams,
-          custom fonts and margins. No Docker, no server, no Puppeteer.
-        </p>
-        <div className="flex items-center gap-3 flex-wrap justify-center">
-          <a href={RELEASES} target="_blank" rel="noopener noreferrer"
-             className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-             style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', boxShadow: '0 1px 2px rgba(99,102,241,0.4)' }}>
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        <div className="flex items-center gap-2">
+          <input ref={fileInputRef} type="file" accept=".md,.markdown,.txt" className="hidden" onChange={handleFileUpload} />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-400 rounded-md transition-all duration-150 hover:text-slate-200 hover:bg-slate-800"
+            style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
-            Download
-          </a>
-          <a href={GITHUB} target="_blank" rel="noopener noreferrer"
-             className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-200 bg-slate-800 border border-slate-700 hover:border-indigo-400 transition-colors">
-            {GH_ICON} View source
-          </a>
-          <a href={WEB_APP} target="_blank" rel="noopener noreferrer"
-             className="text-sm text-slate-500 hover:text-indigo-400 transition-colors">
-            or try the web version →
-          </a>
+            Upload .md
+          </button>
+          <ExportButton markdown={markdown} settings={settings} />
         </div>
-      </section>
+      </header>
 
-      {/* Demo GIF */}
-      <section className="flex justify-center px-6 pb-16">
-        <div className="rounded-xl overflow-hidden w-full max-w-3xl border border-slate-800"
-             style={{ boxShadow: '0 0 60px rgba(99,102,241,0.1)' }}>
-          <Image
-            src="/demo.gif"
-            alt="mdPDF desktop app demo"
-            width={900}
-            height={580}
-            unoptimized
-            className="w-full"
+      {/* Panel labels row */}
+      <div className="flex flex-shrink-0" style={{ height: '32px' }}>
+        <div style={{ width: '260px', minWidth: '40px', background: 'white', borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }} />
+        <div className="flex-1 flex items-center px-5" style={{ borderRight: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(15,23,42,0.8)' }}>
+          <span className="text-[10px] font-medium text-slate-500 uppercase tracking-[0.15em]">Markdown</span>
+        </div>
+        <div className="flex-1 flex items-center px-5 bg-white" style={{ borderBottom: '1px solid #e2e8f0' }}>
+          <span className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.15em]">Preview</span>
+          <span className="ml-auto text-[9px] text-slate-300 italic">Preview is approximate</span>
+        </div>
+      </div>
+
+      {/* Main panels */}
+      <main className="flex flex-1 overflow-hidden">
+        <StyleSidebar settings={settings} onChange={handleSettingsChange} onReset={handleReset} />
+        {/* Editor column */}
+        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#0d1424', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+          <FormatToolbar
+            hasSelection={selection.selectionStart !== selection.selectionEnd}
+            onFormat={applyFormat}
+            onInsert={insertSnippet}
+            canUndo={past.length > 0 || debounceRef.current !== null}
+            onUndo={handleUndo}
+          />
+          <Editor
+            value={markdown}
+            onChange={handleMarkdownChange}
+            textareaRef={textareaRef}
+            onSelect={handleSelect}
           />
         </div>
-      </section>
-
-      {/* Features */}
-      <section className="max-w-4xl mx-auto px-6 pb-20">
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-          {FEATURES.map(f => (
-            <div key={f.label} className="rounded-lg p-5 bg-slate-900 border border-slate-800">
-              <div className="text-sm font-semibold mb-1.5 text-indigo-400">{f.label}</div>
-              <div className="text-sm leading-relaxed text-slate-500">{f.desc}</div>
-            </div>
-          ))}
+        <div className="flex-1 overflow-auto bg-white preview-scroll">
+          <Preview markdown={markdown} settings={settings} />
         </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="text-center pb-10 text-xs text-slate-700">
-        <a href={GITHUB} target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:underline">
-          github.com/ibrahimokdadov/winmdPDF
-        </a>
-        {' · '}
-        <a href={WEB_APP} target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:underline">
-          mdpdf.whhite.com
-        </a>
-      </footer>
-
+      </main>
     </div>
   )
 }

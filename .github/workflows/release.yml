@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm ci --prefix renderer
+
+      - name: Build Next.js
+        run: npm run build:next
+
+      - name: Build Electron
+        run: npm run build:electron
+
+      - name: Package (Windows)
+        run: npx electron-builder --win --publish=always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm ci --prefix renderer
+
+      - name: Build Next.js
+        run: npm run build:next
+
+      - name: Build Electron
+        run: npm run build:electron
+
+      - name: Package (macOS)
+        run: npx electron-builder --mac --publish=always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm ci --prefix renderer
+
+      - name: Build Next.js
+        run: npm run build:next
+
+      - name: Build Electron
+        run: npm run build:electron
+
+      - name: Package (Linux)
+        run: npx electron-builder --linux --publish=always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
