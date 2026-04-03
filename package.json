@@ -4,10 +4,10 @@
   "description": "mdPDF desktop app",
   "main": "electron/dist/main.js",
   "scripts": {
-    "dev:next": "cd renderer && next dev",
+    "dev:next": "npm run dev --prefix renderer",
     "dev:electron": "wait-on http://localhost:3000 && electron .",
     "dev": "concurrently \"npm:dev:next\" \"npm:dev:electron\"",
-    "build:next": "cd renderer && next build",
+    "build:next": "npm run build --prefix renderer",
     "build:electron": "esbuild electron/main.ts electron/preload.ts --bundle --platform=node --external:electron --outdir=electron/dist --tsconfig=electron/tsconfig.json",
     "build": "npm run build:next && npm run build:electron",
     "dist": "npm run build && electron-builder",
