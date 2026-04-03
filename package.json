@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "mdPDF desktop app",
   "main": "electron/dist/main.js",
-  "workspaces": ["renderer"],
   "scripts": {
     "dev:next": "cd renderer && next dev",
     "dev:electron": "wait-on http://localhost:3000 && electron .",
@@ -22,6 +21,7 @@
     "esbuild": "^0.20.2",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.4",
+    "ts-node": "^10.9.2",
     "typescript": "^5.4.5",
     "wait-on": "^7.2.0"
   }
