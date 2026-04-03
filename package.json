@@ -2,6 +2,7 @@
   "name": "winmdpdf",
   "version": "1.0.0",
   "description": "mdPDF desktop app",
+  "author": "ibrahimokdadov",
   "main": "electron/dist/main.js",
   "scripts": {
     "dev:next": "npm run dev --prefix renderer",

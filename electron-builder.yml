@@ -1,6 +1,5 @@
 appId: com.mdpdf.app
 productName: mdPDF
-main: electron/dist/main.js
 
 directories:
   output: release
