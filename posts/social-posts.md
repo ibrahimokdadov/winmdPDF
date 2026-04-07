@@ -2,6 +2,24 @@
 
 ---
 
+## Update — Recent files, Open dialog, Drag-drop (Apr 2026)
+
+### LinkedIn
+
+The browser file input always felt like a seam. Desktop app wrapper around a web picker, no real path in the result, nothing useful to hand the main process. Latest build cuts that.
+
+"Open" replaces "Upload .md" and calls Electron's native dialog instead. The main process runs dialog.showOpenDialog, reads the file with fs.readFile, and passes { name, path, content } back through IPC. Path included. Which is what makes recent files possible -> they're stored in recent-files.json in the app's userData folder, 10 entries max, sorted by when you last opened them. A collapsible strip below the header shows them as chips; click one and it reads from disk and moves to the top.
+
+Drag-and-drop goes through the same flow. Electron exposes file.path on the drop event's File objects, so a dragged file calls electronAPI.readFile(path) and ends up in the same list as anything opened through the dialog.
+
+---
+
+### Twitter / X
+
+New in winmdPDF: native file dialog (real paths now), recent files panel that persists between sessions, drag-drop using Electron's file.path. All three wire through the same IPC handler. #electron #opensource
+
+---
+
 ## LinkedIn
 
 ### Technical

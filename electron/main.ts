@@ -1,8 +1,37 @@
-import { app, BrowserWindow, ipcMain, protocol, net } from 'electron'
+import { app, BrowserWindow, ipcMain, protocol, net, dialog } from 'electron'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
+import { readFile, writeFile, mkdir } from 'fs/promises'
 import { exportToPdf } from './pdf'
 import type { StyleSettings } from '../renderer/lib/style-settings'
+
+interface RecentFile {
+  name: string
+  path: string
+  openedAt: number
+}
+
+const MAX_RECENT = 10
+
+async function getRecentFilesPath() {
+  return join(app.getPath('userData'), 'recent-files.json')
+}
+
+async function loadRecentFiles(): Promise<RecentFile[]> {
+  try {
+    const filePath = await getRecentFilesPath()
+    const raw = await readFile(filePath, 'utf-8')
+    return JSON.parse(raw)
+  } catch {
+    return []
+  }
+}
+
+async function saveRecentFiles(files: RecentFile[]) {
+  const filePath = await getRecentFilesPath()
+  await mkdir(join(app.getPath('userData')), { recursive: true })
+  await writeFile(filePath, JSON.stringify(files, null, 2), 'utf-8')
+}
 
 const isDev = !app.isPackaged
 
@@ -35,6 +64,36 @@ function createWindow() {
 
 ipcMain.handle('export-pdf', async (_event, markdown: string, settings: StyleSettings) => {
   return exportToPdf(markdown, settings)
+})
+
+ipcMain.handle('open-file', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'txt'] }],
+  })
+  if (result.canceled || result.filePaths.length === 0) return null
+  const filePath = result.filePaths[0]
+  const content = await readFile(filePath, 'utf-8')
+  const name = filePath.split(/[\\/]/).pop() ?? filePath
+  return { name, path: filePath, content }
+})
+
+ipcMain.handle('read-file', async (_event, filePath: string) => {
+  const content = await readFile(filePath, 'utf-8')
+  const name = filePath.split(/[\\/]/).pop() ?? filePath
+  return { name, path: filePath, content }
+})
+
+ipcMain.handle('get-recent-files', async () => {
+  return loadRecentFiles()
+})
+
+ipcMain.handle('add-recent-file', async (_event, entry: RecentFile) => {
+  const files = await loadRecentFiles()
+  const filtered = files.filter(f => f.path !== entry.path)
+  const updated = [{ ...entry, openedAt: Date.now() }, ...filtered].slice(0, MAX_RECENT)
+  await saveRecentFiles(updated)
+  return updated
 })
 
 app.whenReady().then(() => {

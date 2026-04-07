@@ -6,6 +6,7 @@ import Preview from '@/components/Preview'
 import ExportButton from '@/components/ExportButton'
 import StyleSidebar from '@/components/StyleSidebar'
 import FormatToolbar from '@/components/FormatToolbar'
+import RecentFilesPanel from '@/components/RecentFilesPanel'
 import { loadSettings, saveSettings, DEFAULT_SETTINGS } from '@/lib/style-settings'
 import type { StyleSettings } from '@/lib/style-settings'
 import { wrap } from '@/lib/format-helpers'
@@ -52,13 +53,17 @@ export default function Home() {
   const [past, setPast] = useState<string[]>([])
   const [settings, setSettings] = useState<StyleSettings>(DEFAULT_SETTINGS)
   const [selection, setSelection] = useState({ selectionStart: 0, selectionEnd: 0 })
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [recentFiles, setRecentFiles] = useState<import('@/types/electron').RecentFile[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const historySnapshotRef = useRef(DEFAULT_MARKDOWN)
 
   useEffect(() => {
     setSettings(loadSettings())
+    if (typeof window !== 'undefined' && window.electronAPI) {
+      window.electronAPI.getRecentFiles().then(setRecentFiles)
+    }
   }, [])
 
   function pushHistory(snapshot: string) {
@@ -151,14 +156,52 @@ export default function Home() {
     })
   }
 
-  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+  async function handleFileLoaded(result: { name: string; path: string; content: string }) {
     beforeProgrammaticChange()
-    const reader = new FileReader()
-    reader.onload = (ev) => setMarkdown(ev.target?.result as string)
-    reader.readAsText(file)
-    e.target.value = ''
+    setMarkdown(result.content)
+    if (window.electronAPI) {
+      const updated = await window.electronAPI.addRecentFile({ name: result.name, path: result.path, openedAt: Date.now() })
+      setRecentFiles(updated)
+    }
+  }
+
+  async function handleOpenFile() {
+    if (!window.electronAPI) return
+    const result = await window.electronAPI.openFile()
+    if (!result) return
+    handleFileLoaded(result)
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.dataTransfer.types.includes('Files')) setIsDragOver(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+  }
+
+  async function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+    const file = e.dataTransfer.files[0]
+    if (!file) return
+    // In Electron, File objects have a `path` property
+    const filePath = (file as File & { path?: string }).path
+    if (filePath && window.electronAPI) {
+      const result = await window.electronAPI.readFile(filePath)
+      handleFileLoaded(result)
+    } else {
+      // Fallback: browser FileReader (no path, won't add to recents)
+      beforeProgrammaticChange()
+      const reader = new FileReader()
+      reader.onload = (ev) => setMarkdown(ev.target?.result as string)
+      reader.readAsText(file)
+    }
   }
 
   return (
@@ -179,20 +222,21 @@ export default function Home() {
           <span className="font-serif text-white text-xl leading-none" style={{ fontWeight: 400, letterSpacing: '-0.02em' }}>PDF</span>
         </div>
         <div className="flex items-center gap-2">
-          <input ref={fileInputRef} type="file" accept=".md,.markdown,.txt" className="hidden" onChange={handleFileUpload} />
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handleOpenFile}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-400 rounded-md transition-all duration-150 hover:text-slate-200 hover:bg-slate-800"
             style={{ border: '1px solid rgba(255,255,255,0.1)' }}
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
             </svg>
-            Upload .md
+            Open
           </button>
           <ExportButton markdown={markdown} settings={settings} />
         </div>
       </header>
+
+      <RecentFilesPanel files={recentFiles} onOpen={handleFileLoaded} onFilesChange={setRecentFiles} />
 
       {/* Panel labels row */}
       <div className="flex flex-shrink-0" style={{ height: '32px' }}>
@@ -210,7 +254,30 @@ export default function Home() {
       <main className="flex flex-1 overflow-hidden">
         <StyleSidebar settings={settings} onChange={handleSettingsChange} onReset={handleReset} />
         {/* Editor column */}
-        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#0d1424', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+        <div
+          className="flex-1 flex flex-col overflow-hidden relative"
+          style={{ background: '#0d1424', borderRight: '1px solid rgba(255,255,255,0.06)' }}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {/* Drag-over overlay */}
+          {isDragOver && (
+            <div
+              className="absolute inset-0 z-50 flex flex-col items-center justify-center pointer-events-none"
+              style={{
+                background: 'rgba(99,102,241,0.08)',
+                border: '2px dashed rgba(99,102,241,0.5)',
+                backdropFilter: 'blur(2px)',
+              }}
+            >
+              <svg className="w-10 h-10 text-indigo-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-3-3v6m5.25-4.5A8.25 8.25 0 1110.5 5.25M20.25 15.75v3a.75.75 0 01-.75.75h-3" />
+              </svg>
+              <span className="text-sm font-medium text-indigo-300">Drop to open</span>
+              <span className="text-xs text-indigo-400/60 mt-1">.md · .markdown · .txt</span>
+            </div>
+          )}
           <FormatToolbar
             hasSelection={selection.selectionStart !== selection.selectionEnd}
             onFormat={applyFormat}

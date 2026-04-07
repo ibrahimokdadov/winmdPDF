@@ -15,7 +15,9 @@ Write Markdown, get a PDF. Desktop app for Windows, macOS, and Linux.
 - **Style sidebar** — set font family, font size, line height, margins, and header/footer text. Settings persist between sessions.
 - **Format toolbar** — select text and apply bold, italic, underline, strikethrough, text color, highlight, font family, font size
 - **Diagram inserter** — pick a Mermaid diagram type, a template inserts at cursor
-- **File upload** — drag in any `.md` file
+- **Open file** — native OS file dialog to open any `.md` file
+- **Recent files** — collapsible panel shows your last 10 opened files; click any chip to reopen instantly
+- **Drag & drop** — drop a `.md` file onto the editor pane to load it; dropped files are added to recents
 - **No Puppeteer** — PDF export uses Electron's built-in Chromium (`webContents.printToPDF()`). No second Chromium download, no extra install.
 - **Offline, no server** — runs as a desktop app. No Docker, no cloud dependency.
 
